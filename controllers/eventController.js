@@ -146,51 +146,54 @@ const deleteEVent = asyncHandler(async (req, res) => {
 
 
 const createLike = asyncHandler(async (req, res) => {
-    const { eventId } = req.body;
-    const userId = req.user.id; // Fetch the userId from req.user
-  
-    // Check if eventId is provided
-    if (!eventId) {
+  const { eventId } = req.body;
+  const userId = req.user.id; // Fetch the userId from req.user
+
+  // Check if eventId is provided
+  if (!eventId) {
       res.status(400);
       throw new Error("eventId is required");
-    }
-  
-    // Validate eventId format
-    if (!mongoose.Types.ObjectId.isValid(eventId)) {
+  }
+
+  // Validate eventId format
+  if (!mongoose.Types.ObjectId.isValid(eventId)) {
       res.status(400);
       throw new Error("Invalid event ID");
-    }
-  
-    // Validate userId format
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
+  }
+
+  // Validate userId format
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
       res.status(400);
       throw new Error("Invalid user ID");
-    }
-  
-    // Check if the event exists
-    const event = await Event.findById(eventId);
-    if (!event) {
+  }
+
+  // Check if the event exists
+  const event = await Event.findById(eventId);
+  if (!event) {
       res.status(404);
       throw new Error("Event not found");
-    }
-  
-    // Check if the like already exists for this user and event
-    const existingLike = await Like.findOne({ eventId, userId });
-    if (existingLike) {
-      res.status(400);
-      throw new Error("User has already liked this event");
-    }
-  
-    // Create a like entry
-    const like = await Like.create({ eventId, userId });
-  
-    // Respond with success message and the created like data
-    res.status(201).json({
-      status: "success",
-      message: "Like added successfully",
-      data: like,
-    });
-  });
+  }
+
+  // Check if the like already exists for this user and event
+  const existingLike = await Like.findOne({ eventId, userId });
+
+  if (existingLike) {
+      // If the like exists, remove it
+      await Like.deleteOne({ _id: existingLike._id });
+      res.status(200).json({
+          status: "success",
+          message: "Like removed successfully"
+      });
+  } else {
+      // If the like does not exist, create it
+      const like = await Like.create({ eventId, userId });
+      res.status(201).json({
+          status: "success",
+          message: "Like added successfully",
+          data: like
+      });
+  }
+});
   
   
 const getLikes = asyncHandler(async (req, res) => {
