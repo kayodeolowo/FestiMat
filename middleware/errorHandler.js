@@ -10,7 +10,7 @@ const errorHandler = (err, req, res, next) => {
                 status: "error",
                 title: "Validation failed",
                 message: err.message,
-                // stackTrace: err.stack,
+                //  stackTrace: err.stack,
             });
             break;
 

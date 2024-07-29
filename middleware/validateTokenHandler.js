@@ -14,7 +14,7 @@ const validateToken = asyncHandler(async (req, res, next) => {
                 return; // Stop further execution
             }
 
-            req.user = decoded; // Attach decoded token to the request object
+            req.user = decoded.user; // Attach decoded token to the request object
             next(); // Proceed to the next middleware or route handler
         });
     } else {

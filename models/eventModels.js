@@ -2,11 +2,7 @@ const mongoose = require("mongoose")
 
 const eventSchema = mongoose.Schema({
 
-    // user_id:{
-    //     type: mongoose.Schema.Types.ObjectId,
-    //     required: true,
-    //     ref: "User"
-    // },  to add a specific user id when creating the event  
+     
     name: {
         type: String,
         required: [true, "please add the event name"]
@@ -33,7 +29,12 @@ const eventSchema = mongoose.Schema({
         required: [true, "please add the description"]
     },
 
-   
+    event_type: {
+        type: String, // Optional, if you want to store the event type directly in the document
+        enum: ['past', 'upcoming'],
+        default: 'upcoming'
+    }
+
 },
 
 {
