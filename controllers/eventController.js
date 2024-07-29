@@ -2,51 +2,38 @@ const asyncHandler = require("express-async-handler");
 const mongoose = require("mongoose");
 const Event = require("../models/eventModels")
 const Like = require("../models/likeModel");
-
+const  { paginate, search } = require("../utils/utils")
 
 
 // Get all events with pagination
 const getEvents = asyncHandler(async (req, res) => {
-  // Get the page number and page size from query parameters
-  let { page = 1, pageSize = 10 } = req.query;
-  page = parseInt(page);
-  pageSize = parseInt(pageSize);
+  // Extract query parameters
+  let { page = 1, pageSize = 10, search: searchTerm = '' } = req.query;
 
-  // Calculate the number of documents to skip
-  const skip = (page - 1) * pageSize;
+  // Fetch all events
+  const allEvents = await Event.find().select('-description').sort({ createdAt: -1 });
 
-  // Get total number of events
-  const totalEvents = await Event.countDocuments();
-
-  // Fetch events for the current page
-  const events = await Event.find()
-      .select('-description') // Exclude the description field
-      .sort({ createdAt: -1 }) // Sort by createdAt in descending order
-      .skip(skip)
-      .limit(pageSize);
+  // Apply search using the search utility
+  const filteredEvents = search(allEvents, searchTerm, ['name', 'location']);
 
   // Determine the event_type based on the current date
   const now = new Date();
-  events.forEach(event => {
-      const eventDate = new Date(event.date);
-      event.event_type = eventDate < now ? 'past' : 'upcoming';
+  filteredEvents.forEach(event => {
+    const eventDate = new Date(event.date);
+    event.event_type = eventDate < now ? 'past' : 'upcoming';
   });
 
-  // Calculate the total number of pages
-  const totalPages = Math.ceil(totalEvents / pageSize);
+  // Apply pagination using the paginate utility
+  const paginatedEvents = paginate(filteredEvents, page, pageSize);
 
-  // Return the data with pagination info
+  // Return the paginated and filtered events
   res.status(200).json({
-      status: "success",
-      message: "Data fetched successfully",
-      data: {
-          totalEvents,
-          totalPages,
-          currentPage: page,
-          events
-      }
+    status: "success",
+    message: "Data fetched successfully",
+    data: paginatedEvents
   });
 });
+
 
 
 // Create a event
@@ -144,7 +131,7 @@ const deleteEVent = asyncHandler(async (req, res) => {
     res.status(200).json({ status: "success", message: "event Deleted" });
 });
 
-
+//create like with specific user id
 const createLike = asyncHandler(async (req, res) => {
   const { eventId } = req.body;
   const userId = req.user.id; // Fetch the userId from req.user
@@ -195,7 +182,7 @@ const createLike = asyncHandler(async (req, res) => {
   }
 });
   
-  
+//get likes with user id
 const getLikes = asyncHandler(async (req, res) => {
     const userId = req.user.id; // Fetch userId from req.user
   
