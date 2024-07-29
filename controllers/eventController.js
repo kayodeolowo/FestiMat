@@ -2,31 +2,34 @@ const asyncHandler = require("express-async-handler");
 const mongoose = require("mongoose");
 const Event = require("../models/eventModels")
 const Like = require("../models/likeModel");
-const  { paginate, search } = require("../utils/utils")
+const  { paginate, search , filterByEventType} = require("../utils/utils")
 
 
-// Get all events with pagination
+// Get all events with pagination, search, and filter by event type
 const getEvents = asyncHandler(async (req, res) => {
   // Extract query parameters
-  let { page = 1, pageSize = 10, search: searchTerm = '' } = req.query;
+  let { page = 1, pageSize = 10, search: searchTerm = '', eventType } = req.query;
 
   // Fetch all events
   const allEvents = await Event.find().select('-description').sort({ createdAt: -1 });
 
-  // Apply search using the search utility
-  const filteredEvents = search(allEvents, searchTerm, ['name', 'location']);
-
   // Determine the event_type based on the current date
   const now = new Date();
-  filteredEvents.forEach(event => {
+  allEvents.forEach(event => {
     const eventDate = new Date(event.date);
     event.event_type = eventDate < now ? 'past' : 'upcoming';
   });
 
-  // Apply pagination using the paginate utility
-  const paginatedEvents = paginate(filteredEvents, page, pageSize);
+  // Apply search using the search utility
+  const filteredEvents = search(allEvents, searchTerm, ['name', 'location']);
 
-  // Return the paginated and filtered events
+  // Apply event type filter using the filterByEventType utility
+  const eventsByType = filterByEventType(filteredEvents, eventType);
+
+  // Apply pagination using the paginate utility
+  const paginatedEvents = paginate(eventsByType, page, pageSize);
+
+  // Return the paginated, filtered, and searched events
   res.status(200).json({
     status: "success",
     message: "Data fetched successfully",

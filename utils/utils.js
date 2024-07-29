@@ -1,3 +1,4 @@
+// utils.js
 const paginate = (data, page, pageSize) => {
     page = parseInt(page);
     pageSize = parseInt(pageSize);
@@ -24,5 +25,11 @@ const paginate = (data, page, pageSize) => {
     );
   };
   
-  module.exports = { paginate, search };
+  const filterByEventType = (data, eventType) => {
+    if (!eventType) return data;
+  
+    return data.filter(item => item.event_type === eventType);
+  };
+  
+  module.exports = { paginate, search, filterByEventType };
   
