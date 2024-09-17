@@ -1,6 +1,5 @@
 const express = require("express");
 const router = express.Router()
-
 const validateToken = require("../middleware/validateTokenHandler");
 const { getEvents, getEvent, createEvent, updateEvent, deleteEVent,  createLike, getLikes  } = require("../controllers/eventController");
 
