@@ -38,11 +38,10 @@ const getEvents = asyncHandler(async (req, res) => {
 });
 
 
-
 // Create a event
 const createEvent = asyncHandler(async (req, res) => {
   // console.log(req.body);
-  const { name, date, time, description , location, phoneNumber} = req.body;
+  const { name, date, time, description , location, event_type} = req.body;
 
   // Array to collect missing fields
   let missingFields = [];
@@ -52,7 +51,8 @@ const createEvent = asyncHandler(async (req, res) => {
   if (!time) missingFields.push("time");
   if (!location) missingFields.push("location");
   if (!description) missingFields.push("description");
-  if (!phoneNumber) missingFields.push("phoneNumber");
+  if (!event_type) missingFields.push("event_type");
+
 
   if (missingFields.length > 0) {
       res.status(400);
@@ -64,7 +64,7 @@ const createEvent = asyncHandler(async (req, res) => {
       location,
       date,
       time,
-      phoneNumber,
+      event_type,
       description,
   });
   const data = event;
@@ -131,7 +131,7 @@ const deleteEVent = asyncHandler(async (req, res) => {
     }
 
     await event.deleteOne({ _id: req.params.id });
-    res.status(200).json({ status: "success", message: "event Deleted" });
+    res.status(200).json({ status: "success", message: "Event Deleted Succesfully" });
 });
 
 //create like with specific user id
