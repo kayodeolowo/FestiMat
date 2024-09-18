@@ -32,6 +32,12 @@ const userSchema = mongoose.Schema({
         type: String,
         required: [ true, "please add the password"],
     },
+
+    user_type: {
+        type: String, // Optional, if you want to store the event type directly in the document
+        enum: ['user', 'event_planner', 'super_admin'],
+        default: 'user'
+    }
     
 },
 

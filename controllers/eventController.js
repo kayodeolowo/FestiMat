@@ -193,7 +193,7 @@ const getLikes = asyncHandler(async (req, res) => {
     const likes = await Like.find({ userId })
       .populate({
         path: 'eventId', // Reference to the Event model
-        select: 'location date time' // Fields to include from the Event model
+        select: 'location date time name' // Fields to include from the Event model
       })
       .sort({ createdAt: -1 }); // Sort by createdAt in descending order
   
@@ -201,9 +201,11 @@ const getLikes = asyncHandler(async (req, res) => {
     const formattedLikes = likes.map(like => ({    
             _id: like._id,
             event_id: like.eventId._id,
+            name: like.eventId.name,
             date: like.eventId.date,
             location: like.eventId.location,
             time: like.eventId.time,
+            
           
             
             

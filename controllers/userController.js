@@ -11,7 +11,7 @@ const mongoose = require("mongoose");
 
 const updateProfile = asyncHandler(async (req, res) => {
     const userId = req.user.id; // Get userId from the authenticated user's token
-    const { username, last_name, first_name, phoneNumber } = req.body;
+    const { username, last_name, first_name, phoneNumber, user_type } = req.body;
 
     // Find the user by ID
     const user = await User.findById(userId);
@@ -35,6 +35,7 @@ const updateProfile = asyncHandler(async (req, res) => {
     if (first_name) user.first_name = first_name;
     if (last_name) user.last_name = last_name;
     if (phoneNumber) user.phoneNumber = phoneNumber;
+    if (user_type) user.user_type = user_type;
 
     // Save the updated user information
     const updatedUser = await user.save();
@@ -50,6 +51,7 @@ const updateProfile = asyncHandler(async (req, res) => {
             last_name: updatedUser.last_name,
             first_name: updatedUser.first_name,
             phoneNumber: updatedUser.phoneNumber,
+            user_type: updatedUser.user_type,
         }
     });
 });
