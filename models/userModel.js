@@ -35,7 +35,7 @@ const userSchema = mongoose.Schema({
 
     user_type: {
         type: String, // Optional, if you want to store the event type directly in the document
-        enum: ['user', 'event_planner', 'super_admin'],
+        enum: ['user', 'event_planner', 'admin'],
         default: 'user'
     }
     

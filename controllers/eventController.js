@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const mongoose = require("mongoose");
 const Event = require("../models/eventModels")
 const Like = require("../models/likeModel");
+const Booking = require("../models/bookingModel"); // Your new booking schema
 const  { paginate, search , filterByEventType} = require("../utils/utils")
 
 
@@ -33,7 +34,12 @@ const getEvents = asyncHandler(async (req, res) => {
   res.status(200).json({
     status: "success",
     message: "Data fetched successfully",
-    data: paginatedEvents
+    data: {
+      data: paginatedEvents.data,
+      totalItems: paginatedEvents.totalItems,
+      totalPages: paginatedEvents.totalPages,
+      currentPage: paginatedEvents.currentPage
+    }
   });
 });
 
@@ -41,7 +47,7 @@ const getEvents = asyncHandler(async (req, res) => {
 // Create a event
 const createEvent = asyncHandler(async (req, res) => {
   // console.log(req.body);
-  const { name, date, time, description , location, event_type} = req.body;
+  const { name, date, time, description , location,  total_seats, event_type, ticket_type, price} = req.body;
 
   // Array to collect missing fields
   let missingFields = [];
@@ -52,6 +58,9 @@ const createEvent = asyncHandler(async (req, res) => {
   if (!location) missingFields.push("location");
   if (!description) missingFields.push("description");
   if (!event_type) missingFields.push("event_type");
+  if (!total_seats) missingFields.push("total_seats");
+  if (!ticket_type) missingFields.push("ticket_type");
+  if (!price) missingFields.push("price");
 
 
   if (missingFields.length > 0) {
@@ -66,6 +75,9 @@ const createEvent = asyncHandler(async (req, res) => {
       time,
       event_type,
       description,
+      total_seats,
+      ticket_type,
+      price
   });
   const data = event;
   res.status(201).json({
@@ -75,7 +87,7 @@ const createEvent = asyncHandler(async (req, res) => {
   });
 });
 
-// Get single event
+// Get single event 
 const getEvent = asyncHandler(async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
         res.status(400);
@@ -141,93 +153,168 @@ const createLike = asyncHandler(async (req, res) => {
 
   // Check if eventId is provided
   if (!eventId) {
-      res.status(400);
-      throw new Error("eventId is required");
+    return res.status(400).json({
+      status: "error",
+      message: "eventId is required"
+    });
   }
 
   // Validate eventId format
   if (!mongoose.Types.ObjectId.isValid(eventId)) {
-      res.status(400);
-      throw new Error("Invalid event ID");
+    return res.status(400).json({
+      status: "error", 
+      message: "Invalid event ID"
+    });
   }
 
   // Validate userId format
   if (!mongoose.Types.ObjectId.isValid(userId)) {
-      res.status(400);
-      throw new Error("Invalid user ID");
+    return res.status(400).json({
+      status: "error",
+      message: "Invalid user ID"
+    });
   }
 
   // Check if the event exists
   const event = await Event.findById(eventId);
   if (!event) {
-      res.status(404);
-      throw new Error("Event not found");
+    return res.status(404).json({
+      status: "error",
+      message: "Event not found"
+    });
   }
 
-  // Check if the like already exists for this user and event
-  const existingLike = await Like.findOne({ eventId, userId });
+  try {
+    // Check if the like already exists for this user and event
+    const existingLike = await Like.findOne({ eventId, userId });
 
-  if (existingLike) {
+    if (existingLike) {
       // If the like exists, remove it
       await Like.deleteOne({ _id: existingLike._id });
-      res.status(200).json({
-          status: "success",
-          message: "Like removed successfully"
+      return res.status(200).json({
+        status: "success",
+        message: "Like removed successfully",
+        liked: false
       });
-  } else {
+    } else {
       // If the like does not exist, create it
       const like = await Like.create({ eventId, userId });
-      res.status(201).json({
-          status: "success",
-          message: "Like added successfully",
-          data: like
+      return res.status(201).json({
+        status: "success",
+        message: "Like added successfully",
+        liked: true,
+        data: like
       });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      status: "error",
+      message: "Error processing like/unlike",
+      error: error.message
+    });
   }
 });
+
+
+
   
 //get likes with user id
 const getLikes = asyncHandler(async (req, res) => {
-    const userId = req.user.id; // Fetch userId from req.user
-  
-    // Fetch likes for the specific user and populate event details
-    const likes = await Like.find({ userId })
-      .populate({
-        path: 'eventId', // Reference to the Event model
-        select: 'location date time name' // Fields to include from the Event model
-      })
-      .sort({ createdAt: -1 }); // Sort by createdAt in descending order
-  
-    // Format the data to match the desired output
-    const formattedLikes = likes.map(like => ({    
-            _id: like._id,
-            event_id: like.eventId._id,
-            name: like.eventId.name,
-            date: like.eventId.date,
-            location: like.eventId.location,
-            time: like.eventId.time,
-            
-          
-            
-            
-          
-    }));
-  
-    // Get the total number of likes
-    const totalLikes = formattedLikes.length;
-  
-    // Return the data
-    res.status(200).json({
-      status: "success",
-      message: "Data fetched successfully",
-      data: {
-        totalLikes,
-        likes: formattedLikes
-      }
-    });
+  const userId = req.user.id; // Fetch userId from req.user
+
+  // Fetch likes for the specific user and populate event details
+  const likes = await Like.find({ userId })
+    .populate({
+      path: 'eventId', // Reference to the Event model
+     
+    })
+    .sort({ createdAt: -1 }); // Sort by createdAt in descending order
+
+  // Get the total number of likes
+  const totalLikes = likes.length;
+
+  // Return the data directly
+  res.status(200).json({
+    status: "success",
+    message: "Data fetched successfully",
+    data: {
+      totalLikes,
+      likes, // Return the likes array directly without formatting
+    },
   });
-  
-  
+});
+
   
 
 
-module.exports = {createEvent, getLikes, createLike, getEvents, getEvent, updateEvent, deleteEVent, createEvent };
+
+const bookEvent = asyncHandler(async (req, res) => {
+  const { eventId, fullName, seats_qty } = req.body; // Extract required data
+  const userId = req.user.id; // User ID from authenticated request
+
+  // Validate required fields
+  if (!eventId || !fullName || !seats_qty) {
+    return res.status(400).json({
+      status: "error",
+      message: "eventId, fullname, and seats_qty are required fields",
+    });
+  }
+
+  // Validate eventId format
+  if (!mongoose.Types.ObjectId.isValid(eventId)) {
+    return res.status(400).json({
+      status: "error",
+      message: "Invalid event ID",
+    });
+  }
+
+  // Check if the event exists
+  const event = await Event.findById(eventId);
+  if (!event) {
+    return res.status(404).json({
+      status: "error",
+      message: "Event not found",
+    });
+  }
+
+  // Check if requested seats exceed the available seats
+  if (event.total_seats < seats_qty) {
+    return res.status(400).json({
+      status: "error",
+      message: `Not enough seats available. Only ${event.total_seats} seats left.`,
+    });
+  }
+
+  // Create booking
+  try {
+    const booking = await Booking.create({
+      eventId,
+      userId,
+      fullName,
+      seats_qty,
+    });
+
+    // Deduct the seats from the event's total_seats
+    event.total_seats -= seats_qty;
+    await event.save();
+
+    res.status(201).json({
+      status: "success",
+      message: "Event booked successfully",
+      booking,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: "Failed to process the booking",
+      error: error.message,
+    });
+  }
+});
+
+
+
+  
+
+
+module.exports = {createEvent, getLikes, bookEvent, createLike, getEvents, getEvent, updateEvent, deleteEVent, createEvent };

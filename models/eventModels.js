@@ -29,6 +29,22 @@ const eventSchema = mongoose.Schema({
         required: [true, "please add the description"]
     },
 
+    total_seats: {
+        type: Number,
+        required: [true, "please add the total sits"]
+    },
+
+    ticket_type: {
+        type: String,
+        enum: ['paid', 'free'],
+        required: [true, "please add Type"]
+    },
+
+    price: {
+        type: Number,
+        required: [true, "please add Price"]
+    },
+
     event_type: {
         type: String, // Optional, if you want to store the event type directly in the document
         enum: ['past', 'upcoming'],

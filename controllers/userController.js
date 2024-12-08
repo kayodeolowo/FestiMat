@@ -47,7 +47,7 @@ const updateProfile = asyncHandler(async (req, res) => {
         data: {
             _id: updatedUser.id,
             username: updatedUser.username,
-            email: updatedUser.email,  // Email remains unchanged
+            email: updatedUser.email,
             last_name: updatedUser.last_name,
             first_name: updatedUser.first_name,
             phoneNumber: updatedUser.phoneNumber,
@@ -84,7 +84,7 @@ const loginUser = asyncHandler(async (req, res)=>{
                 id: user.id
             }
         }, process.env.ACCESS_TOKEN_sECRET,
-        {expiresIn: "500m"}
+        {expiresIn: "500000m"}
     );
         res.status(200).json({
             
