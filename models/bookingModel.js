@@ -6,7 +6,6 @@ const bookingSchema = new mongoose.Schema({
     ref: 'event',  // Refers to the Event model
     required: true
   },
-  // You can add additional fields if needed, such as userId to track which user liked the event
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -18,12 +17,21 @@ const bookingSchema = new mongoose.Schema({
     required: [true, "Full Name is required"]
   },
 
-
   seats_qty: {
     type: Number,
-    required: [true, "please add number of seats to book"]
+    required: [true, "Please add number of seats to book"]
   },
 
+  ticketID: {
+    type: String,
+    required: true,  // Ensure ticketID is required
+    unique: true     // Enforce uniqueness of ticketID
+  },
+
+  seatNumbers: {
+    type: [Number], // Array of seat numbers that were booked
+    required: true,  // Ensure that seatNumbers are always provided
+  },
 
   createdAt: {
     type: Date,
@@ -31,4 +39,4 @@ const bookingSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model("eventModel", bookingSchema)
+module.exports = mongoose.model("booking", bookingSchema);

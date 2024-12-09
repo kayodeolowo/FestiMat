@@ -1,10 +1,13 @@
 const express = require("express");
 const router = express.Router()
 const validateToken = require("../middleware/validateTokenHandler");
-const { getEvents, getEvent, createEvent, updateEvent, deleteEVent,  createLike, getLikes, bookEvent  } = require("../controllers/eventController");
+const { getEvents, getEvent, createEvent, updateEvent, deleteEVent,   createLike, getLikes, bookEvent, getBookedEvents, getSingleBookedEvent, cancelBookedEvent  } = require("../controllers/eventController");
 
 // validation for routes 
-router.use(validateToken);  
+router.use(validateToken); 
+router.route("/cancelBooking/:id").post(cancelBookedEvent);
+router.route("/bookedEvent/:id").get(getSingleBookedEvent); 
+router.route("/bookedEvents").get(getBookedEvents);
 router.route("/getAllEvents").get(getEvents);
 router.route("/getLikes").get(getLikes);
 router.route("/:id").get(getEvent)
@@ -13,6 +16,7 @@ router.route("/createLike").post(createLike);
 router.route("/updateEvent/:id").put(updateEvent);
 router.route("/deleteEvent/:id").delete(deleteEVent);
 router.route("/bookEvent").post(bookEvent);
+
 
 
 module.exports = router; 

@@ -249,10 +249,9 @@ const getLikes = asyncHandler(async (req, res) => {
 
 
 const bookEvent = asyncHandler(async (req, res) => {
-  const { eventId, fullName, seats_qty } = req.body; // Extract required data
-  const userId = req.user.id; // User ID from authenticated request
+  const { eventId, fullName, seats_qty } = req.body;
+  const userId = req.user.id;
 
-  // Validate required fields
   if (!eventId || !fullName || !seats_qty) {
     return res.status(400).json({
       status: "error",
@@ -260,7 +259,6 @@ const bookEvent = asyncHandler(async (req, res) => {
     });
   }
 
-  // Validate eventId format
   if (!mongoose.Types.ObjectId.isValid(eventId)) {
     return res.status(400).json({
       status: "error",
@@ -268,7 +266,6 @@ const bookEvent = asyncHandler(async (req, res) => {
     });
   }
 
-  // Check if the event exists
   const event = await Event.findById(eventId);
   if (!event) {
     return res.status(404).json({
@@ -277,7 +274,6 @@ const bookEvent = asyncHandler(async (req, res) => {
     });
   }
 
-  // Check if requested seats exceed the available seats
   if (event.total_seats < seats_qty) {
     return res.status(400).json({
       status: "error",
@@ -285,16 +281,47 @@ const bookEvent = asyncHandler(async (req, res) => {
     });
   }
 
-  // Create booking
+  // Generate ticket ID
+  const generateTicketID = async () => {
+    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const digits = "0123456789";
+    let ticketID = "";
+    for (let i = 0; i < 3; i++) ticketID += characters.charAt(Math.random() * characters.length);
+    for (let i = 0; i < 3; i++) ticketID += digits.charAt(Math.random() * digits.length);
+
+    const existingTicket = await Booking.findOne({ ticketID });
+    return existingTicket ? generateTicketID() : ticketID;
+  };
+
+  const ticketID = await generateTicketID();
+
+  // Fetch all booked seat numbers for this event
+  const allBookings = await Booking.find({ eventId }, "seatNumbers");
+  const bookedSeats = allBookings.flatMap((booking) => booking.seatNumbers);
+
+  // Generate the next available seat numbers
+  const seatNumbers = [];
+  let currentSeat = 1;
+
+  while (seatNumbers.length < seats_qty) {
+    if (!bookedSeats.includes(currentSeat)) {
+      seatNumbers.push(currentSeat);
+    }
+    currentSeat++;
+  }
+
   try {
     const booking = await Booking.create({
       eventId,
       userId,
       fullName,
       seats_qty,
+      ticketID,
+      seatNumbers,
     });
 
-    // Deduct the seats from the event's total_seats
+    // console.log('Created Booking:', booking);
+
     event.total_seats -= seats_qty;
     await event.save();
 
@@ -314,7 +341,132 @@ const bookEvent = asyncHandler(async (req, res) => {
 
 
 
+
+
+const getBookedEvents = asyncHandler(async (req, res) => {
+  const userId = req.user.id; // Fetch userId from req.user
+
+  try {
+    // Fetch booked events for the specific user and populate the event details
+    const bookings = await Booking.find({ userId })
+      .populate({
+        path: 'eventId', // Reference to the Event model
+        select: 'name date time location description total_seats', // Select event fields to include
+      })
+      .sort({ createdAt: -1 }); // Sort by booking date in descending order
+
+    // Return the bookings directly
+    res.status(200).json({
+      status: "success",
+      message: "Booked events fetched successfully",
+      totalBookings: bookings.length,
+      data: bookings, // Return the array of bookings directly
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: "Error fetching booked events",
+      error: error.message,
+    });
+  }
+});
+
+
+
+const getSingleBookedEvent = asyncHandler(async (req, res) => {
+  const userId = req.user.id; // Get the authenticated user's ID
+  const { bookingId } = req.params; // Extract the booking ID from route params
+
+  try {
+    // Fetch a single booking with populated event details
+    const bookings = await Booking.findOne({ id: bookingId, userId })
+      .populate({
+        path: 'eventId', // Reference to the Event model
+        select: 'name date time location description total_seats', // Event fields to include
+      });
+
+    // Check if the booking exists
+    if (!bookings) {
+      return res.status(404).json({
+        status: "error",
+        message: "Booking not found",
+      });
+    }
+
+    // Return the booking data
+    res.status(200).json({
+      status: "success",
+      message: "Single booked event fetched successfully",
+      data: {
+        bookingId: bookings.id,
+        fullName: bookings.fullName,
+        seats_qty: bookings.seats_qty,
+        seatNumbers: bookings.seatNumbers || [],
+        ticketID: bookings.ticketID,
+        createdAt: bookings.createdAt,
+        eventDetails: bookings.eventId, // Event details populated from Event model
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: "Error fetching the booked event",
+      error: error.message,
+    });
+  }
+});
+
+
+const cancelBookedEvent = asyncHandler(async (req, res) => {
+  const { id } = req.params;  // Booking ID
+  const userId = req.user.id;  // Current logged-in user ID
+
+  // Check if the booking exists
+  const booking = await Booking.findById(id);
+  if (!booking) {
+    return res.status(404).json({
+      status: "error",
+      message: "Booking not found",
+    });
+  }
+
+  // Check if the current user is the one who made the booking
+  if (booking.userId.toString() !== userId.toString()) {
+    return res.status(403).json({
+      status: "error",
+      message: "You are not authorized to cancel this booking",
+    });
+  }
+
+  const event = await Event.findById(booking.eventId);
+  if (!event) {
+    return res.status(404).json({
+      status: "error",
+      message: "Event not found",
+    });
+  }
+
+  // Release the booked seats back to the event
+  event.total_seats += booking.seats_qty;
+  await event.save();
+
+  // Release the seat numbers
+  const releasedSeats = booking.seatNumbers;
+
+  // Optional: You can store the released seats in a log or use them later for tracking.
+  // For now, we just update the event's available seats.
   
+  // Delete the booking
+  await Booking.findByIdAndDelete(id);
+
+  res.status(200).json({
+    status: "success",
+    message: "Booking canceled successfully",
+    // releasedSeats,
+    // updatedTotalSeats: event.total_seats, 
+  });
+});
 
 
-module.exports = {createEvent, getLikes, bookEvent, createLike, getEvents, getEvent, updateEvent, deleteEVent, createEvent };
+
+module.exports = {createEvent, cancelBookedEvent, getSingleBookedEvent, getBookedEvents, getLikes, bookEvent, createLike, getEvents, getEvent, updateEvent, deleteEVent, createEvent };
